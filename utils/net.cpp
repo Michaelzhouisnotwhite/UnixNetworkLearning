@@ -40,10 +40,10 @@ auto Accept(int listenfd) -> std::pair<sockaddr_in, int> {
   return {client_addr, connfd};
 }
 
-void Send2Server(std::string const& host,
-                 const int port,
-                 const std::string& message,
-                 bool keepalive) {
+absl::StatusOr<std::string> Send2Server(std::string const& host,
+                                        const int port,
+                                        const std::string& message,
+                                        bool keepalive) {
   sockaddr_in addr;
   ZeroMem(&addr);
   int ret = 0;
@@ -53,7 +53,25 @@ void Send2Server(std::string const& host,
 
   int sockfd = socket(PF_INET, SOCK_STREAM, 0);
 
-  if(connect(sockfd, (sockaddr*)&addr, sizeof(addr))!=0){
-    
-  };
+  if (connect(sockfd, (sockaddr*)&addr, sizeof(addr)) != 0) {
+    return absl::InternalError("connection with the server failed...\n");
+  }
+  auto wret = write(sockfd, message.c_str(), message.size());
+  if (wret == -1) {
+    return absl::InternalError("send error");
+  }
+  std::array<char, 1024> recv_buf{0};
+  wret = recv(sockfd, recv_buf.data(), recv_buf.size(), 0);
+  if (wret == -1) {
+    return absl::InternalError("recv error");
+  }
+  std::string result;
+  for (const auto& c : recv_buf) {
+    if (c) {
+      result.push_back(c);
+    } else {
+      break;
+    }
+  }
+  return result;
 }

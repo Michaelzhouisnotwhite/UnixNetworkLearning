@@ -4,6 +4,11 @@
 #include "net.h"
 #include "utils.h"
 int main(int argc, char* argv[]) {
+  // int reuse = 1;
+  // if (setsockopt(*listen_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) != 0) {
+  //   perror("setsockopt");
+  //   return -1;
+  // }
   auto lfd = ListenOn("0.0.0.0", 8088);
   auto [client_addr, connfd] = Accept(lfd);
   std::array<char, 1024> buf;
@@ -17,7 +22,9 @@ int main(int argc, char* argv[]) {
     ZeroMem(buf.data(), buf.size());
     FD_ZERO(&read_fds);
     FD_ZERO(&exception_fds);
-    ret = select(connfd + 1, &read_fds, nullptr, &exception_fds, nullptr);
+    timeval timeout;
+    ZeroMem(&timeout);
+    ret = select(connfd + 1, &read_fds, nullptr, &exception_fds, &timeout);
     if (ret < 0) {
       std::cout << "select failed"
                 << "\n";
