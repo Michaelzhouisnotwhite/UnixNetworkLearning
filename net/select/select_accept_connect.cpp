@@ -63,11 +63,11 @@ int main(int argc, char* argv[]) {
       } else if (FD_ISSET(fd, &exception_fds)) {
         // MSG_OOB接受带外数据(out of bound) 我理解的是优先级高的数据
         ret = recv(fd, buf_start, buf.size() - 1, MSG_OOB);
-        if (ret <= 0) {
+        if (ret < 0) {
           break;
         }
         std::printf("get %ld bytes of oob data: %s\n", ret, buf_start);
-      }else if (FD_ISSET(fd, &write_fds)) {
+      } else if (FD_ISSET(fd, &write_fds)) {
         std::string _buf{"server received: good luck!"};
         ret = write(fd, _buf.data(), _buf.size());
         if (ret) {
