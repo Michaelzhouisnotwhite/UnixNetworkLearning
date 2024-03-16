@@ -12,7 +12,7 @@
 #include "utils.h"
 
 auto ListenOn(const std::string& host, const int port) -> int {
-  sockaddr_in addr;
+  sockaddr_in addr{};
   ZeroMem(&addr);
   int ret = 0;
   addr.sin_family = AF_INET;
@@ -20,18 +20,24 @@ auto ListenOn(const std::string& host, const int port) -> int {
   addr.sin_port = htons(port);
 
   int listenfd = socket(PF_INET, SOCK_STREAM, 0);
+  int yes = 1;
+  if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+    perror("setsockopt");
+    return -1;
+  }
+
   assert(listenfd >= 0);
-  ret = bind(listenfd, (sockaddr*)&addr, sizeof(addr));
+  ret = bind(listenfd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
   assert(ret != -1);
-  ret = listen(listenfd, 50);
+  ret = listen(listenfd, 50); // 处于未accept状态的队列
   assert(ret != -1);
   return listenfd;
 }
 
 auto Accept(int listenfd) -> std::pair<sockaddr_in, int> {
-  sockaddr_in client_addr;
+  sockaddr_in client_addr{};
   socklen_t client_addrlen = sizeof(client_addr);
-  int connfd = accept(listenfd, (sockaddr*)&client_addr, &client_addrlen);
+  int connfd = accept(listenfd, reinterpret_cast<sockaddr*>(&client_addr), &client_addrlen);
   if (connfd < 0) {
     std::cout << "errno is:" << errno << "\n";
     close(listenfd);
@@ -44,7 +50,7 @@ absl::StatusOr<std::string> Send2Server(std::string const& host,
                                         const int port,
                                         const std::string& message,
                                         bool keepalive) {
-  sockaddr_in addr;
+  sockaddr_in addr{};
   ZeroMem(&addr);
   int ret = 0;
   addr.sin_family = AF_INET;
@@ -53,7 +59,7 @@ absl::StatusOr<std::string> Send2Server(std::string const& host,
 
   int sockfd = socket(PF_INET, SOCK_STREAM, 0);
 
-  if (connect(sockfd, (sockaddr*)&addr, sizeof(addr)) != 0) {
+  if (connect(sockfd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
     return absl::InternalError("connection with the server failed...\n");
   }
   auto wret = write(sockfd, message.c_str(), message.size());
@@ -73,5 +79,6 @@ absl::StatusOr<std::string> Send2Server(std::string const& host,
       break;
     }
   }
+  close(sockfd);
   return result;
 }
