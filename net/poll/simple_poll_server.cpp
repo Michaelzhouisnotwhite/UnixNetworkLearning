@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
         remove_from_pollfds(pfd.fd);
       } else if (pfd.fd & listenfd && pfd.revents & POLLIN) {
         auto [client_addr, connfd] = Accept(pfd.fd);
-        std::printf("new connection client %s:%d\n", inet_ntoa(client_addr.sin_addr),
+        std::printf("new connection client %s:%d\n", modern_inet_ntop_v4(client_addr.sin_addr).c_str(),
                     ntohs(client_addr.sin_port));
         pollfds.push_back(
             pollfd{.fd = connfd, .events = POLLIN | POLLRDHUP | POLLERR | POLLOUT});

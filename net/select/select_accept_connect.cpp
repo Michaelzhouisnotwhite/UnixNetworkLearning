@@ -82,7 +82,8 @@ int main(int argc, char* argv[]) {
     if (FD_ISSET(lfd, &read_fds)) {
       auto [client_addr, connfd] = Accept(lfd);
       sockfds_set.insert(connfd);
-      std::printf("new connection client %s:%d\n", inet_ntoa(client_addr.sin_addr),
+      std::printf("new connection client %s:%d\n",
+                  modern_inet_ntop_v4(client_addr.sin_addr).c_str(),
                   ntohs(client_addr.sin_port));
     }
   }
