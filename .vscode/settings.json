@@ -1,5 +1,6 @@
 {
     "editor.tabSize": 2,
     "cmake.generator": "Ninja",
-    "clangd.path": "clangd"
+    "clangd.path": "clangd",
+    "workbench.colorTheme": "Jetbrains Fleet"
 }
