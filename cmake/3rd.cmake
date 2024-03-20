@@ -4,3 +4,5 @@ set(ABSL_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
 
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/abseil-cpp)
+set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/fmt)

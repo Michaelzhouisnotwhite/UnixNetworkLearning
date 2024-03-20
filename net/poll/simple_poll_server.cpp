@@ -39,13 +39,17 @@ int main(int argc, char* argv[]) {
       if (pfd.revents & POLLRDHUP || pfd.revents & POLLERR) {
         close(pfd.fd);
         remove_from_pollfds(pfd.fd);
+        continue;
       } else if (pfd.fd & listenfd && pfd.revents & POLLIN) {
         auto [client_addr, connfd] = Accept(pfd.fd);
-        std::printf("new connection client %s:%d\n", modern_inet_ntop_v4(client_addr.sin_addr).c_str(),
+        std::printf("new connection client %s:%d\n",
+                    modern_inet_ntop_v4(client_addr.sin_addr).c_str(),
                     ntohs(client_addr.sin_port));
         pollfds.push_back(
             pollfd{.fd = connfd, .events = POLLIN | POLLRDHUP | POLLERR | POLLOUT});
-      } else if (pfd.revents & POLLIN) {
+            continue;
+      }
+      if (pfd.revents & POLLIN) {
         auto lenrecv = recv(pfd.fd, buf.data(), buf.size() - 1, 0);
         if (lenrecv > 0) {
           std::printf("data recv: %s\n", buf.data());
@@ -54,13 +58,16 @@ int main(int argc, char* argv[]) {
           std::printf("conn closed");
           close(pfd.fd);
           remove_from_pollfds(pfd.fd);
+          continue;
         }
-      } else if (pfd.revents & POLLOUT) {
+      }
+      if (pfd.revents & POLLOUT) {
         std::string msg{"data received: good luck"};
         auto send_code = send(pfd.fd, msg.data(), msg.length(), 0);
         if (send_code) {
           remove_from_pollfds(pfd.fd);
           close(pfd.fd);
+          continue;
         }
       }
     }
