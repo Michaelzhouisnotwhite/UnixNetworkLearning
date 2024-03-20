@@ -1,7 +1,7 @@
 {
     "editor.tabSize": 2,
     "cmake.generator": "Ninja",
-    "clangd.path": "/home/tssh/app/clangd_17.0.3/bin/clangd",
+    "clangd.path": "clangd",
     "workbench.colorTheme": "Jetbrains Fleet",
     "cmake.cmakePath": "cmake"
 }
