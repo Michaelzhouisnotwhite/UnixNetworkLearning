@@ -26,16 +26,16 @@ int main(int argc, char* argv[]) {
   };
 
   std::array<char, 1024> buf{0};
-  std::vector<epoll_event> epoll_events{listen_event};
+  std::vector<epoll_event> epoll_events(1);
   while (true) {
     ZeroMem(buf.data(), buf.size());
-    auto remove_from_epoll_events = [&epoll_events](int target_fd) {
-      auto target_iter = std::find_if(epoll_events.begin(), epoll_events.end(),
-                                      [target_fd](epoll_event _pfd) {
-                                        return _pfd.data.fd == target_fd;
-                                      });
-      epoll_events.erase(target_iter);
-    };
+    // auto remove_from_epoll_events = [&epoll_events](int target_fd) {
+    //   auto target_iter = std::find_if(epoll_events.begin(), epoll_events.end(),
+    //                                   [target_fd](epoll_event _pfd) {
+    //                                     return _pfd.data.fd == target_fd;
+    //                                   });
+    //   epoll_events.erase(target_iter);
+    // };
     auto event_ready_count = epoll_wait(epoll_fd, epoll_events.data(),
                                         static_cast<int>(epoll_events.size()), -1);
     for (int i = 0; i < event_ready_count; ++i) {
@@ -50,7 +50,8 @@ int main(int argc, char* argv[]) {
           fmt::println(stderr, "listen event register failed");
           continue;
         }
-        epoll_events.push_back(event);
+        // epoll_events.push_back(event);
+        epoll_events.emplace_back();
       } else {
         auto event = epoll_events.at(i);
         auto pfd = event.data.fd;
@@ -60,24 +61,31 @@ int main(int argc, char* argv[]) {
             std::printf("data recv: %s\n", buf.data());
             event.events |= EPOLLOUT;
             epoll_ctl(epoll_fd, EPOLL_CTL_MOD, pfd, &event);
-            epoll_events.at(i) = event;
+            continue;
+            // epoll_events.at(i) = event;
           }
           if (lenrecv == 0) {
             std::printf("conn closed");
             close(event.data.fd);
-            remove_from_epoll_events(event.data.fd);
+            epoll_events.resize(epoll_events.size() - 1);
+            // remove_from_epoll_events(event.data.fd);
+            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, pfd, nullptr);
             continue;
           }
         }
         if (event.events & EPOLLRDHUP || event.events & EPOLLERR) {
           close(pfd);
-          remove_from_epoll_events(pfd);
+          // remove_from_epoll_events(pfd);
+          epoll_ctl(epoll_fd, EPOLL_CTL_DEL, pfd, nullptr);
+          epoll_events.resize(epoll_events.size() - 1);
         }
         if (event.events & EPOLLOUT) {
           std::string msg{"data received: good luck"};
           auto send_code = send(pfd, msg.data(), msg.length(), 0);
           if (send_code) {
-            remove_from_epoll_events(pfd);
+            // remove_from_epoll_events(pfd);
+            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, pfd, nullptr);
+            epoll_events.resize(epoll_events.size() - 1);
             close(pfd);
             continue;
           }

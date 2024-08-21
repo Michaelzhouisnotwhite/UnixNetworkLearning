@@ -8,16 +8,29 @@
 #include <array>
 #include <iostream>
 #include <set>
+#include <unordered_set>
 
 #include <sys/poll.h>
 #include "net.h"
 #include "utils.h"
 template <>
 struct std::hash<pollfd> {
-  std::size_t operator()(const pollfd& fd) noexcept {
+  std::size_t operator()(const pollfd& fd) const noexcept {
     return std::hash<int>()(fd.fd);
   }
 };
+template <>
+struct std::equal_to<pollfd> {
+  bool operator()(const pollfd& a, const pollfd& b) {
+    return a.fd == b.fd;
+  }
+};
+bool operator<(pollfd a, pollfd b) {
+  return a.fd < b.fd;
+}
+bool operator==(pollfd a, pollfd b) {
+  return a.fd == b.fd;
+}
 
 int main(int argc, char* argv[]) {
   auto listenfd = ListenOn("0.0.0.0", 8089);
@@ -34,20 +47,21 @@ int main(int argc, char* argv[]) {
   while (true) {
     auto ret = poll(pollfds.data(), pollfds.size(), -1);  // -1 永远阻塞
     ZeroMem(buf.data(), buf.size());
-    auto enum_vec = std::vector(pollfds);
+    auto enum_vec = decltype(pollfds){};
+    std::copy(pollfds.begin(), pollfds.end(), std::back_inserter(enum_vec));
     for (auto pfd : enum_vec) {
       if (pfd.revents & POLLRDHUP || pfd.revents & POLLERR) {
         close(pfd.fd);
         remove_from_pollfds(pfd.fd);
         continue;
-      } else if (pfd.fd & listenfd && pfd.revents & POLLIN) {
+      } else if (pfd.fd == listenfd && pfd.revents & POLLIN) {
         auto [client_addr, connfd] = Accept(pfd.fd);
         std::printf("new connection client %s:%d\n",
                     modern_inet_ntop_v4(client_addr.sin_addr).c_str(),
                     ntohs(client_addr.sin_port));
         pollfds.push_back(
             pollfd{.fd = connfd, .events = POLLIN | POLLRDHUP | POLLERR | POLLOUT});
-            continue;
+        continue;
       }
       if (pfd.revents & POLLIN) {
         auto lenrecv = recv(pfd.fd, buf.data(), buf.size() - 1, 0);

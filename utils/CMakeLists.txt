@@ -1,4 +1,5 @@
 project(utils)
 add_library(utils net.h net.cpp)
 target_link_libraries(utils PUBLIC absl_status absl_statusor)
+install(TARGETS utils DESTINATION lib)
 target_include_directories(${PROJECT_NAME} INTERFACE .)
